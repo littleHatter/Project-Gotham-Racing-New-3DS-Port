@@ -1,0 +1,10 @@
+{
+  "fresh_extraction_matches_working_game": true,
+  "repeat_run_preserves_mtimes": true,
+  "conflicts_rejected_without_force": true,
+  "force_restores_only_recognized_files": true,
+  "unrelated_files_and_saves_preserved": true,
+  "unsupported_and_truncated_input_rejected_before_output": true,
+  "space_and_unicode_paths_passed": true,
+  "game_files_verified": 12
+}

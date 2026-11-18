@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "baseline": "Test 5, hardware confirmed by user",
+  "application_sha256": "c3aa91dd4d78e568de0ef8c94e375c8569033cc67f8a95db041ca2c4491f2da4",
+  "description": "Symbian game, now on New 3DS!",
+  "application_and_core_implementation_unchanged": true,
+  "fresh_game_data_files_verified": 12,
+  "extractor_default_destination_verified": true,
+  "save_files_included": false,
+  "extractor_checks": {
+    "fresh_extraction_matches_working_game": true,
+    "repeat_run_preserves_mtimes": true,
+    "conflicts_rejected_without_force": true,
+    "force_restores_only_recognized_files": true,
+    "unrelated_files_and_saves_preserved": true,
+    "unsupported_and_truncated_input_rejected_before_output": true,
+    "space_and_unicode_paths_passed": true,
+    "game_files_verified": 12
+  }
+}
