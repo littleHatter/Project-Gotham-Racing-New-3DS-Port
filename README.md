@@ -12,6 +12,9 @@ The complete installation archive already contains the prepared game files and s
 
 The extractor installation archive contains the application and soundtrack, plus `prepare_game.py`. Run it with the supported Symbian SIS/SISX package, then copy the resulting `3ds/` folder to the SD-card root. See the installation archive README for Windows, Linux and macOS commands.
 
+Consider using the automated extractor for preparing your game files if that sounds complicated:
+https://github.com/littleHatter/Airplay-New3DS-Game-Data-Preparation-Tool
+
 The layout on the SD card is:
 
 ```
