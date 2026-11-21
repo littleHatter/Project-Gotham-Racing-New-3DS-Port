@@ -1,6 +1,5 @@
 #pragma once
 #include "pgr_screen.h"
-#include "pgr_splash.h"
 #include "pgr_soundtrack.h"
 #include "pgr_prompts.h"
 #include "runtime_s3e.h"
@@ -16,8 +15,8 @@ public:
  void Update(Cpu* cpu,S3ERuntime& runtime,const uint16_t* frame){
   auto screen=ReadPgrScreen(cpu);paused=screen.paused;
   if(screen.name!=lastScreen){lastScreen=screen.name;fprintf(stdout,"[Presentation] Screen %s\n",screen.name.c_str());}
-  prompts=PgrSoftkeyPrompts(frame)|(screen.racing?4:0);
-  if(!openingSeen){bool logo=screen.name=="22CSplashScreenGameState"&&PgrOpeningLogo(frame);if(!logo&&screen.name!="14CMainMenuState")return;openingSeen=true;fprintf(stdout,"[Presentation] %s frame=%u\n",logo?"Opening logo":"Splash skipped: main menu",runtime.Frames());}
+  prompts=PgrSoftkeyPrompts(frame,runtime.SurfaceWidth())|(screen.racing?4:0);
+  if(!openingSeen){const bool logo=screen.name=="22CSplashScreenGameState";if(!logo&&screen.name!="14CMainMenuState")return;openingSeen=true;fprintf(stdout,"[Presentation] %s frame=%u\n",logo?"Opening logo":"Splash skipped: main menu",runtime.Frames());}
   if(screen.name.empty()||screen.paused||screen.loading)return;
   if(screen.results)Cue("win");
   else if(screen.racing){if(!runtime.RaceCity().empty())Cue(runtime.RaceCity());}

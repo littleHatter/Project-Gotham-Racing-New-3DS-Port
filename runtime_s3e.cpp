@@ -3,6 +3,7 @@
 #include "heap.h"
 #include "asset_read.h"
 #include "save_store.h"
+#include "pgr_resource_guard.h"
 #include "third_party/lzma/LzmaDec.h"
 #include <algorithm>
 #include "runtime_clock.h"
@@ -238,6 +239,8 @@ struct S3ERuntime::Impl {
     U ms(){return static_cast<U>(NfsClockMs()-start);}
     bool suspendAndStop=false;
     void pollHost(bool force=false){U now=ms();if(poll&&(force||U(now-lastPoll)>=16)){lastPoll=now;poll(desired);}if(periodicLogging&&U(now-lastHeartbeat)>=5000){lastHeartbeat=now;std::fprintf(stdout,"[S3E] Heartbeat ms=%lu frame=%lu calls=%llu callbacks=%lu\n",(unsigned long)now,(unsigned long)frames,(unsigned long long)calls,(unsigned long)tasks.size());}}
+    unsigned surfaceWidth=320;
+    bool surfaceToggleRequested=false;
     void svc(U index){if((++pollCounter&63u)==0)pollHost();if(quit){finish(0);cpu->Stop();return;}if(index==imports.size()){returned();return;}if(index>=imports.size()){fatal("invalid service index");return;}++calls;const std::string& n=imports[index];if(getenv("PGR_STATE_LIFETIME")){static U previous=0;U state=0;cpu->MemRead(G(0x4a0c4154),&state,4);if(state!=previous){U owner=heap.OwnerOf(state);fprintf(stderr,"[StateOwner] state=%08x owner=%08x size=%u service=%s\n",state,owner,heap.SizeOf(owner),n.c_str());previous=state;}}if(seen.insert(n).second)std::fprintf(stdout,"[S3E] Startup import %llu: %s\n",(unsigned long long)calls,n.c_str());R r{reg(0),reg(1),reg(2),reg(3)};if(getenv("NFS_DIAG")&&(n=="s3eKeyboardGetInt"||n=="s3ePointerGetInt"||n=="s3eMemorySetUserMemMgr"))fprintf(stderr,"[Capability] %s a0=%u a1=%08x a2=%08x\n",n.c_str(),r[0],r[1],r[2]);if(getenv("PAN_IMPORT_TRACE"))fprintf(stderr,"[Import] call=%llu name=%s lr=%08x sp=%08x args=%08x,%08x,%08x,%08x\n",(unsigned long long)calls,n.c_str(),reg(Cpu::REG_LR),reg(Cpu::REG_SP),r[0],r[1],r[2],r[3]);auto done=[this](U x){finish(x);};if(getenv("PGR_AUDIO_TRACE")&&n.rfind("s3eSound",0)==0)fprintf(stderr,"[PGRAudio] %s lr=%08x args=%08x,%08x,%08x,%08x\n",n.c_str(),reg(Cpu::REG_LR),r[0],r[1],r[2],r[3]);
         if(n=="s3eMemorySetInt"){fprintf(stderr,"[CapabilityUnavailable] s3eMemorySetInt property=%u value=%u\n",r[0],r[1]);finish(1);return;}
         // This guest uses secondary heap 1 only as a lifecycle token around video.
@@ -303,12 +306,15 @@ struct S3ERuntime::Impl {
             // The direct background blitter queries property 7 at 0x4A012064
             // and divides the byte pitch by two for RGB565 row stepping.
             // It shares the unrotated 320x240 framebuffer with the GX renderer.
-            U value=r[0]==0?320:r[0]==1?240:(r[0]==2||r[0]==7)?640:r[0]==8?1:0;
+            U value=r[0]==0?surfaceWidth:r[0]==1?240:(r[0]==2||r[0]==7)?2*surfaceWidth:r[0]==8?1:0;
             if(getenv("PAN_SURFACE_TRACE")){static std::set<U> observed;if(observed.insert(r[0]).second)fprintf(stderr,"[Surface] property=%u value=%u lr=%08x\n",r[0],value,reg(Cpu::REG_LR));}
             finish(value);return;
         }
         if(n=="s3eSurfacePtr"){finish(FB_BASE);return;}
-        if(n=="s3eSurfaceShow"){++frames;measureFrame();std::vector<uint16_t> image(320*240);rd(FB_BASE,image.data(),image.size()*2);if(present)present(frames,image.data(),desired);if(periodicLogging&&(frames==1||frames%300==0))std::fprintf(stdout,"[S3E] Frame %lu; heap %lu KB; calls %llu\n",(unsigned long)frames,(unsigned long)(heap.BytesInUse()/1024),(unsigned long long)calls);finish(0);if(limit&&frames>=limit){quit=true;cpu->Stop();}return;}
+        if(n=="s3eSurfaceShow"){++frames;measureFrame();std::vector<uint16_t> image(surfaceWidth*240);rd(FB_BASE,image.data(),image.size()*2);if(present)present(frames,image.data(),desired);if(periodicLogging&&(frames==1||frames%300==0))std::fprintf(stdout,"[S3E] Frame %lu; heap %lu KB; calls %llu\n",(unsigned long)frames,(unsigned long)(heap.BytesInUse()/1024),(unsigned long long)calls);if(surfaceToggleRequested){
+            surfaceWidth=surfaceWidth==320?400:320;
+            surfaceToggleRequested=false;
+        }finish(0);if(limit&&frames>=limit){quit=true;cpu->Stop();}return;}
         if(n=="s3ePointerRegister"){pointerCallbacks[r[0]]={r[1],r[2]};finish(0);return;}
         if(n=="s3ePointerUnRegister"){pointerCallbacks.erase(r[0]);finish(0);return;}
         if(n=="s3eKeyboardRegister"){keyCallbacks[r[0]]={r[1],r[2]};finish(0);return;}if(n=="s3eKeyboardUnRegister"){keyCallbacks.erase(r[0]);finish(0);return;}
@@ -453,7 +459,7 @@ void S3ERuntime::SetAudioCallback(std::function<void(const int16_t*,size_t,U)> f
 void S3ERuntime::SetChannelAudioCallback(std::function<void(U,const int16_t*,size_t,U)> f){p->audioStemOut=std::move(f);}
 void S3ERuntime::RequestQuit(){p->quit=true;p->cpu->Stop();}
 void S3ERuntime::RequestSuspendAndStop(){p->suspendAndStop=true;}
-int S3ERuntime::Run(U e,U limit){p->limit=limit;int err=p->cpu->Start(e,0xDEADBEEF,getenv("PAN_INSTRUCTION_LIMIT")?std::strtoull(getenv("PAN_INSTRUCTION_LIMIT"),nullptr,0):0);p->reportPerformance();std::fprintf(stdout,"[S3E] End: error=%d failed=%d frame=%lu heap peak=%lu KB\n",err,p->failed,(unsigned long)p->frames,(unsigned long)(p->heap.PeakInUse()/1024));return err?err:p->failed?1:0;}
+int S3ERuntime::Run(U e,U limit){if(!InstallRaceResourceGuard(*p->cpu))std::fprintf(stderr,"[RaceResourceGuard] Unsupported guest code or hook unavailable.\n");p->limit=limit;int err=p->cpu->Start(e,0xDEADBEEF,getenv("PAN_INSTRUCTION_LIMIT")?std::strtoull(getenv("PAN_INSTRUCTION_LIMIT"),nullptr,0):0);p->reportPerformance();std::fprintf(stdout,"[S3E] End: error=%d failed=%d frame=%lu heap peak=%lu KB\n",err,p->failed,(unsigned long)p->frames,(unsigned long)(p->heap.PeakInUse()/1024));return err?err:p->failed?1:0;}
 uint32_t S3ERuntime::Frames()const{return p->frames;}bool S3ERuntime::Failed()const{return p->failed;}
 
 uint32_t S3ERuntime::TakeConsolePrompts(){return 0;}
@@ -464,3 +470,6 @@ void S3ERuntime::SetExternalMusicCallback(std::function<void(int16_t*,size_t,U,b
 std::string S3ERuntime::RaceCity()const{return p->raceCity;}
 
 uint32_t S3ERuntime::MasterVolume()const{return p->masterVolume;}
+
+unsigned S3ERuntime::SurfaceWidth() const {return p->surfaceWidth;}
+void S3ERuntime::RequestDisplayToggle(){p->surfaceToggleRequested=true;}

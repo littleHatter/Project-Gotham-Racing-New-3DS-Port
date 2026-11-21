@@ -1,20 +1,11 @@
 {
-  "version": "1.0",
-  "baseline": "Test 5, hardware confirmed by user",
-  "application_sha256": "c3aa91dd4d78e568de0ef8c94e375c8569033cc67f8a95db041ca2c4491f2da4",
-  "description": "Symbian game, now on New 3DS!",
-  "application_and_core_implementation_unchanged": true,
-  "fresh_game_data_files_verified": 12,
-  "extractor_default_destination_verified": true,
-  "save_files_included": false,
-  "extractor_checks": {
-    "fresh_extraction_matches_working_game": true,
-    "repeat_run_preserves_mtimes": true,
-    "conflicts_rejected_without_force": true,
-    "force_restores_only_recognized_files": true,
-    "unrelated_files_and_saves_preserved": true,
-    "unsupported_and_truncated_input_rejected_before_output": true,
-    "space_and_unicode_paths_passed": true,
-    "game_files_verified": 12
-  }
+  "version": "1.2",
+  "baseline": "Paris Time Trial Test 3, hardware confirmed by user",
+  "application_sha256": "3f2e613fedcdf95c466455df7a3c980bbcc0796ceebb2e82bf4a3e5cdfe916bc",
+  "smdh_sha256": "aab745ac1c45982585333d40abf1b60b971082b6ef824ebd00546ca47169fc0a",
+  "title": "Project Gotham Racing",
+  "description": "Project Gotham Racing",
+  "game_files_verified": 12,
+  "soundtrack_files": 7,
+  "save_files_included": false
 }

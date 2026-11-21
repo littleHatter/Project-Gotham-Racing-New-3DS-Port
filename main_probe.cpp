@@ -71,7 +71,8 @@ int main(int argc,char**argv){
  keys.fill(false);for(const auto& e:input)if(n>=e.begin&&n<e.end)keys[e.key]=true;
  if(const char* path=std::getenv("NFS_LIVE_KEYS")){std::ifstream f(path);unsigned key;while(f>>key)if(key<256)keys[key]=true;}
  static S3ERuntime::Keys previous{};for(unsigned key=0;key<256;++key)if(keys[key]!=previous[key]){fprintf(stdout,"[Input] frame=%u key=%u down=%u\n",n,key,keys[key]?1:0);previous[key]=keys[key];}
- auto write=[&](const std::string& path){FILE*f=fopen(path.c_str(),"wb");if(!f)return;fprintf(f,"P6\n320 240\n255\n");for(unsigned i=0;i<320*240;++i){auto p=data[i];unsigned char c[3]={static_cast<unsigned char>((p>>11)*255/31),static_cast<unsigned char>(((p>>5)&63)*255/63),static_cast<unsigned char>((p&31)*255/31)};fwrite(c,1,3,f);}fclose(f);};
+ auto write=[&](const std::string& path){FILE*f=fopen(path.c_str(),"wb");if(!f)return;unsigned width=rt.SurfaceWidth();fprintf(f,"P6\n%u 240\n255\n",width);for(unsigned i=0;i<width*240;++i){auto p=data[i];unsigned char c[3]={static_cast<unsigned char>((p>>11)*255/31),static_cast<unsigned char>(((p>>5)&63)*255/63),static_cast<unsigned char>((p&31)*255/31)};fwrite(c,1,3,f);}fclose(f);};
+ if(getenv("PGR_TEST_LIVE")&&(n==1000||n==1080))rt.RequestDisplayToggle();
  write(output+"/latest.ppm");if(n<=3||n%(std::getenv("PAN_CAPTURE_EVERY")?std::max(1,std::atoi(std::getenv("PAN_CAPTURE_EVERY"))):30)==0||n==frameLimit){char name[64];snprintf(name,sizeof(name),"/frame_%06u.ppm",n);write(output+name);}
  });
  fprintf(stderr,"[Entry] pc=%08x\n",G(bin.entry_point));

@@ -1,3 +1,11 @@
+# Version 1.2 validation
+
+The install archives use the exact Paris Time Trial Test 3 executable.
+On New 3DS hardware, the guard intercepted invalid sound references during
+Corvette Paris Time Trial, the race reached gameplay, and the game exited
+cleanly. The log also confirmed the title cue during the opening splash.
+The invalid-reference source remains unresolved.
+
 # Version 1.0 validation
 
 The release application is byte-for-byte identical to the hardware-confirmed Test 5 application. Packaging does not change gameplay, rendering, audio or save behavior.

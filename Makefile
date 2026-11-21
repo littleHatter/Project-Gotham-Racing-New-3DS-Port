@@ -29,6 +29,10 @@ $(TARGET).elf: $(OBJECTS)
 $(BUILD):
 	mkdir -p $@
 
+$(BUILD)/main_3ds.o: display_toggle_art.h
+display_toggle_art.h: artwork/Switch_to_Wide.png artwork/Switch_to_Standard.png generate_display_toggle.py
+	python3 generate_display_toggle.py
+
 $(BUILD)/%.o: %.cpp | $(BUILD)
 	$(CXX) -MMD -MP $(CXXFLAGS) -c $< -o $@
 $(BUILD)/native_arm.o: native_arm.S | $(BUILD)

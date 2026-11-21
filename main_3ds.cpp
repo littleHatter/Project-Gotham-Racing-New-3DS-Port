@@ -28,7 +28,21 @@ constexpr const char* ROOT="sdmc:/3ds/pgr_mobile";
 FILE* logFile=nullptr;const devoptab_t* originalOut=nullptr;const devoptab_t* originalErr=nullptr;devoptab_t quiet{};
 ssize_t QuietWrite(struct _reent*,void*,const char* data,size_t length){if(logFile)fwrite(data,1,length,logFile);return length;}
 void FaultConsole(){static bool shown=false;if(!shown){consoleInit(GFX_BOTTOM,nullptr);gfxScreenSwapBuffers(GFX_BOTTOM,false);shown=true;}if(originalOut)devoptab_list[STD_OUT]=originalOut;if(originalErr)devoptab_list[STD_ERR]=originalErr;}
-void Present(const uint16_t* image,unsigned prompts){u16 width=0,height=0;u8* fb=gfxGetFramebuffer(GFX_TOP,GFX_LEFT,&width,&height);memset(fb,0,400*240*3);for(unsigned y=0;y<240;++y)for(unsigned x=0;x<320;++x){uint16_t p=image[y*320+x];if(y>=228&&((prompts&1&&x<20)||(prompts&2&&x>=300)))p=0;u8* pixel=fb+((x+40)*240+239-y)*3;pixel[0]=(p&31)*255/31;pixel[1]=((p>>5)&63)*255/63;pixel[2]=((p>>11)&31)*255/31;}gfxFlushBuffers();gfxScreenSwapBuffers(GFX_TOP,false);}
+void Present(const uint16_t* image,unsigned prompts,unsigned width){
+    u8* fb=gfxGetFramebuffer(GFX_TOP,GFX_LEFT,nullptr,nullptr);
+    const unsigned left=(400-width)/2;
+    if(left)memset(fb,0,400*240*3);
+    for(unsigned y=0;y<240;++y)for(unsigned x=0;x<width;++x){
+        uint16_t pixel=image[y*width+x];
+        if(y>=228&&((prompts&1&&x<20)||(prompts&2&&x>=width-20)))pixel=0;
+        u8* out=fb+((x+left)*240+239-y)*3;
+        out[0]=(pixel&31)*255/31;
+        out[1]=((pixel>>5)&63)*255/63;
+        out[2]=(pixel>>11)*255/31;
+    }
+    gfxFlushBuffers();
+    gfxScreenSwapBuffers(GFX_TOP,false);
+}
 class Audio3DS {
     static constexpr unsigned COUNT=12,SAMPLES=512;
     ndspWaveBuf buffers[COUNT]{};s16* pcm=nullptr;unsigned next=0,queued=0,dropped=0;bool ready=false,playing=false;
@@ -81,11 +95,17 @@ int main(){
      else runtime.SetExternalMusicCallback([&](int16_t* data,size_t count,uint32_t volume,bool paused){presentation.Mix(data,count,volume,paused);});
      runtime.SetAudioCallback([&](const int16_t* p,size_t n,uint32_t rate){audio.Push(p,n,rate);});
      runtime.SetPollCallback([&](S3ERuntime::Keys& keys){keys.fill(false);if(!aptMainLoop()){runtime.RequestQuit();return;}hidScanInput();u32 held=hidKeysHeld();
+      if(runtime.Frames()&&(hidKeysDown()&KEY_TOUCH)){
+       touchPosition touch{};
+       hidTouchRead(&touch);
+       if(touch.px<kToggleWidth&&touch.py>=kToggleTop&&touch.py<240)
+        runtime.RequestDisplayToggle();
+      }
       keys[9]=(held&(KEY_DLEFT|KEY_CPAD_LEFT))!=0;keys[10]=(held&(KEY_DUP|KEY_CPAD_UP|KEY_R))!=0;keys[11]=(held&(KEY_DRIGHT|KEY_CPAD_RIGHT))!=0;keys[12]=(held&(KEY_DDOWN|KEY_CPAD_DOWN|KEY_L))!=0;
       keys[78]=(held&KEY_A)!=0;keys[209]=(held&KEY_X)!=0;keys[210]=(held&(KEY_B|KEY_START))!=0;keys[17]=(held&KEY_X)!=0;keys[18]=(held&KEY_Y)!=0;keys[19]=(held&KEY_SELECT)!=0;
      });
-     runtime.SetFrameCallback([&](uint32_t frame,const uint16_t* image,S3ERuntime::Keys&){presentation.Update(cpu.get(),runtime,image);if(independent)music.SetControls(runtime.MasterVolume(),presentation.paused);DrawPgrBottom(presentation.prompts,false);Present(image,presentation.prompts);if(captureState(lastFrameState.data(),lastFrameStateAddress))lastRecordedFrame=frame;if((frame==1||frame%120==0)&&logFile)fflush(logFile);});
-     puts("PGR New 3DS Test 5");result=runtime.Run(G(binary.entry_point),0);
+     runtime.SetFrameCallback([&](uint32_t frame,const uint16_t* image,S3ERuntime::Keys&){presentation.Update(cpu.get(),runtime,image);if(independent)music.SetControls(runtime.MasterVolume(),presentation.paused);const unsigned width=runtime.SurfaceWidth();DrawPgrBottom(presentation.prompts,false,width==400);Present(image,presentation.prompts,width);if(captureState(lastFrameState.data(),lastFrameStateAddress))lastRecordedFrame=frame;if((frame==1||frame%120==0)&&logFile)fflush(logFile);});
+     puts("PGR New 3DS Wide Test 1");result=runtime.Run(G(binary.entry_point),0);
      if(result){uint32_t registers[17]{};for(unsigned n=0;n<17;++n)cpu->RegRead(n,&registers[n]);uint32_t state=0;cpu->MemRead(G(0x4a0c4154),&state,4);uint8_t snapshot[128]{};bool valid=state>=HEAP_BASE&&uint64_t(state)+sizeof(snapshot)<=uint64_t(HEAP_BASE)+HEAP_SIZE;if(valid)cpu->MemRead(state,snapshot,sizeof(snapshot));FILE* detail=fopen("sdmc:/3ds/pgr_mobile/test5_report.bin","wb");if(detail){fwrite(registers,1,sizeof(registers),detail);fwrite(&state,1,sizeof(state),detail);fwrite(snapshot,1,sizeof(snapshot),detail);fwrite(&lastRecordedFrame,1,sizeof(lastRecordedFrame),detail);fwrite(&lastFrameStateAddress,1,sizeof(lastFrameStateAddress),detail);fwrite(lastFrameState.data(),1,lastFrameState.size(),detail);fclose(detail);}if(logFile)fflush(logFile);}
 
     }else{FaultConsole();puts("Could not load game files. Check the game folder.");}
