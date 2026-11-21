@@ -1,6 +1,6 @@
 # Project Gotham Racing for New Nintendo 3DS
 
-![alt text](https://github.com/littleHatter/Project-Gotham-Racing-New-3DS-Port/blob/main/Screenshot.png "PGR Screenshot")
+![alt text](https://github.com/littleHatter/Project-Gotham-Racing-New-3DS-Port/blob/main/Screenshot.png "PGR Screenshot") ![alt text](https://github.com/littleHatter/Project-Gotham-Racing-New-3DS-Port/blob/main/screen.png "PGR Screenshot")
 
 A native New 3DS adaptation of the Symbian version of Project Gotham Racing, built from the MGSM-derived compatibility implementation.
 
