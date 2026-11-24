@@ -1,3 +1,7 @@
+# Version 1.3 validation
+
+The user confirmed the v1.2-based software ghosting test on a New Nintendo 3DS with no extra delay. Version 1.3 uses the same software rendering and blend implementation with the supplied touchscreen selection artwork. The final touch prompt was cross-compiled and its framebuffer composition was verified offline.
+
 # Version 1.2 validation
 
 The install archives use the exact Paris Time Trial Test 3 executable.

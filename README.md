@@ -1,19 +1,14 @@
 # Project Gotham Racing for New Nintendo 3DS
 
-![alt text](https://github.com/littleHatter/Project-Gotham-Racing-New-3DS-Port/blob/main/Screenshot.png "PGR Screenshot") ![alt text](https://github.com/littleHatter/Project-Gotham-Racing-New-3DS-Port/blob/main/screen.png "PGR Screenshot")
+A native New 3DS adaptation of the Symbian version of Project Gotham Racing, built from the MGSM-derived compatibility implementation. Version 1.3 adds optional race ghosting to the v1.2 software renderer, including the race-loading guard and splash music fix. At launch, tap **Yes** on the right to enable motion blur or **No** on the left to play without it. Press **B** to return to the launcher. Tap the bottom-left touchscreen graphic to switch between Standard (320×240) and Wide (400×240). Each launch starts in Standard.
 
-A native New 3DS adaptation of the Symbian version of Project Gotham Racing, built from the MGSM-derived compatibility implementation.
-
-Requires a New Nintendo 3DS, New 3DS XL or New 2DS XL with a working homebrew setup.
+Requires a New Nintendo 3DS, New 3DS XL or New 2DS XL with a working homebrew setup. Application metadata: **Project Gotham Racing**
 
 ## Installation
 
 The complete installation archive already contains the prepared game files and soundtrack. Merge its `3ds/` folder into the SD-card root.
 
 The extractor installation archive contains the application and soundtrack, plus `prepare_game.py`. Run it with the supported Symbian SIS/SISX package, then copy the resulting `3ds/` folder to the SD-card root. See the installation archive README for Windows, Linux and macOS commands.
-
-Consider using the automated extractor for preparing your game files if that sounds complicated:
-https://github.com/littleHatter/Airplay-New3DS-Game-Data-Preparation-Tool
 
 The layout on the SD card is:
 
@@ -50,7 +45,7 @@ f19fbb3a01cd6869809ae8d9724d405026bfa9d7613a8ea5eb15bb5c697a8a04
 
 The extractor checks the package and every resulting game file. Another edition is rejected rather than silently producing an untested installation. Existing matching files are kept. If recognized game files differ, use a fresh destination or explicitly pass `--force`; unrelated files and saves are never deleted.
 
-Game payloads and SIS/SISX files are not included in this source archive, extract those yourself using the included script under tools, then place them in the game path.
+Game payloads, SIS/SISX files, soundtrack WAVs and compiled applications are not included in this source archive.
 
 ## Build
 
@@ -85,14 +80,25 @@ The bottom screen shows contextual A/B prompts and Start during active racing. I
 
 ## Music
 
-The original Symbian release of PGR does not include a soundtrack, so the soundtrack from the contemporary J2ME release has been implemented as an extra feature.
+Put `title.wav`, `cairo.wav`, `london.wav`, `paris.wav`, `sanfrancisco.wav`, `shanghai.wav` and `win.wav` in `/3ds/pgr_mobile/music/`. The installation archives include the supplied normalized soundtrack. WAV format: mono, 16-bit PCM, 22050 Hz.
 
-The installation archives include the supplied normalized soundtrack. WAV format: mono, 16-bit PCM, 22050 Hz.
-
+Title music starts at the PGR car/logo splash. City music follows racing; the results song plays once and then stays silent until another song is cued. Other songs loop, and transitions fade. Music follows the game's volume/mute setting and continues during loading through independent buffered NDSP playback. Effects retain their own audio path.
 
 ## Diagnostics and verification
 
-It is possible the game might rarely crash, for reasons unknown at current (It's very difficult to trigger). Diagnostics are active on crash and generated logs use the names `/3ds/pgr_mobile/test5.log` and `test5_report.bin`. Preserve them before relaunching if reporting a problem, since they'll be overwritten by any new ones.
+Buffered crash logging is retained. Diagnostics use the legacy names `/3ds/pgr_mobile/test5.log` and `test5_report.bin` (if generated). Preserve them before relaunching if reporting a problem. No per-frame music logging is enabled.
+
+The user confirmed gameplay, contextual artwork, music timing, fading, volume control and uninterrupted music during loading on hardware. The source also includes focused runtime, mixer, renderer and modeled music-worker tests. See `VALIDATION.md`.
+
+For Linux desktop checks, install Python `unicorn==2.1.4`, g++ and zlib development files:
+
+```
+python3 build_desktop.py
+python3 run_runtime_tests.py /path/to/game /path/to/music
+PGR_MUSIC_DIR=/path/to/music PGR_PRESENTATION_TRACE=1 ./pandemonium_probe /path/to/game 1400 frames test_user validation/pause_input.txt
+```
+
+The desktop executable retains its inherited filename. These checks do not require changes to the prepared game data.
 
 ## Credits and license
 

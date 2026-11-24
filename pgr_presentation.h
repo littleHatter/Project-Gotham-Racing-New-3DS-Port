@@ -11,9 +11,10 @@ class PgrPresentation {
 public:
  void SetCueCallback(std::function<void(const std::string&)> fn){cueCallback=std::move(fn);}
  unsigned prompts=0;bool paused=false;
+ bool racing=false;
  explicit PgrPresentation(const std::string& directory):music(directory){}
  void Update(Cpu* cpu,S3ERuntime& runtime,const uint16_t* frame){
-  auto screen=ReadPgrScreen(cpu);paused=screen.paused;
+  auto screen=ReadPgrScreen(cpu);paused=screen.paused;racing=screen.racing;
   if(screen.name!=lastScreen){lastScreen=screen.name;fprintf(stdout,"[Presentation] Screen %s\n",screen.name.c_str());}
   prompts=PgrSoftkeyPrompts(frame,runtime.SurfaceWidth())|(screen.racing?4:0);
   if(!openingSeen){const bool logo=screen.name=="22CSplashScreenGameState";if(!logo&&screen.name!="14CMainMenuState")return;openingSeen=true;fprintf(stdout,"[Presentation] %s frame=%u\n",logo?"Opening logo":"Splash skipped: main menu",runtime.Frames());}

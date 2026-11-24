@@ -11,6 +11,9 @@
 #include "pgr_presentation.h"
 #include "pgr_music_3ds.h"
 #include "pgr_bottom.h"
+#include "pgr_race_blur.h"
+#include "blur_menu_art.h"
+#include <zlib.h>
 u32 __stacksize__=1024*1024;
 u32 __ctru_heap_size=24*1024*1024;
 u32 __ctru_linear_heap_size=4*1024*1024;
@@ -73,8 +76,45 @@ public:
 }
 extern "C" void ShowLogOnScreen(){FaultConsole();}
 int main(){
- gfxInitDefault();gfxSetDoubleBuffering(GFX_BOTTOM,false);consoleInit(GFX_BOTTOM,nullptr);consoleDebugInit(debugDevice_CONSOLE);
+ gfxInitDefault();
+ gfxSetScreenFormat(GFX_BOTTOM, GSP_BGR8_OES);
+ gfxSetDoubleBuffering(GFX_BOTTOM, false);
  aptSetHomeAllowed(true);osSetSpeedupEnable(true);
+ auto* menuScreen = gfxGetFramebuffer(GFX_BOTTOM, GFX_LEFT, nullptr, nullptr);
+ uLongf menuBytes = 320 * 240 * 3;
+ if (uncompress(menuScreen, &menuBytes, kBlurMenuArt, sizeof(kBlurMenuArt)) != Z_OK ||
+     menuBytes != 320 * 240 * 3) {
+     gfxExit();
+     return 1;
+ }
+ gfxFlushBuffers();
+ gfxScreenSwapBuffers(GFX_BOTTOM, false);
+ bool blurEnabled = false;
+ bool selected = false;
+ while (aptMainLoop()) {
+     hidScanInput();
+     const u32 pressed = hidKeysDown();
+     if (pressed & KEY_B) break;
+     if (pressed & KEY_TOUCH) {
+         touchPosition point{};
+         hidTouchRead(&point);
+         if (point.py >= 120 && point.py < 240 && point.px < 320) {
+             blurEnabled = point.px >= 160;
+             selected = true;
+             break;
+         }
+     }
+     gspWaitForVBlank();
+ }
+ if (!selected) { gfxExit(); return 0; }
+ while (aptMainLoop()) {
+     hidScanInput();
+     if (!(hidKeysHeld() & KEY_TOUCH)) break;
+     gspWaitForVBlank();
+ }
+ if (!aptMainLoop()) { gfxExit(); return 0; }
+
+ consoleInit(GFX_BOTTOM,nullptr);consoleDebugInit(debugDevice_CONSOLE);
  gfxSetScreenFormat(GFX_BOTTOM,GSP_BGR8_OES);DrawPgrBottom(0,true);gfxFlushBuffers();gfxScreenSwapBuffers(GFX_BOTTOM,false);
  originalOut=devoptab_list[STD_OUT];originalErr=devoptab_list[STD_ERR];quiet=*originalOut;quiet.name="pgr_test_log";quiet.write_r=QuietWrite;
  std::error_code ec;std::filesystem::create_directories(ROOT,ec);logFile=fopen("sdmc:/3ds/pgr_mobile/test5.log","wb");if(logFile)setvbuf(logFile,nullptr,_IOFBF,32768);devoptab_list[STD_OUT]=&quiet;devoptab_list[STD_ERR]=&quiet;setvbuf(stdout,nullptr,_IONBF,0);setvbuf(stderr,nullptr,_IONBF,0);
@@ -104,8 +144,9 @@ int main(){
       keys[9]=(held&(KEY_DLEFT|KEY_CPAD_LEFT))!=0;keys[10]=(held&(KEY_DUP|KEY_CPAD_UP|KEY_R))!=0;keys[11]=(held&(KEY_DRIGHT|KEY_CPAD_RIGHT))!=0;keys[12]=(held&(KEY_DDOWN|KEY_CPAD_DOWN|KEY_L))!=0;
       keys[78]=(held&KEY_A)!=0;keys[209]=(held&KEY_X)!=0;keys[210]=(held&(KEY_B|KEY_START))!=0;keys[17]=(held&KEY_X)!=0;keys[18]=(held&KEY_Y)!=0;keys[19]=(held&KEY_SELECT)!=0;
      });
-     runtime.SetFrameCallback([&](uint32_t frame,const uint16_t* image,S3ERuntime::Keys&){presentation.Update(cpu.get(),runtime,image);if(independent)music.SetControls(runtime.MasterVolume(),presentation.paused);const unsigned width=runtime.SurfaceWidth();DrawPgrBottom(presentation.prompts,false,width==400);Present(image,presentation.prompts,width);if(captureState(lastFrameState.data(),lastFrameStateAddress))lastRecordedFrame=frame;if((frame==1||frame%120==0)&&logFile)fflush(logFile);});
-     puts("PGR New 3DS Wide Test 1");result=runtime.Run(G(binary.entry_point),0);
+     PgrRaceBlur blur;
+     runtime.SetFrameCallback([&](uint32_t frame,const uint16_t* image,S3ERuntime::Keys&){presentation.Update(cpu.get(),runtime,image);if(independent)music.SetControls(runtime.MasterVolume(),presentation.paused);const unsigned width=runtime.SurfaceWidth();DrawPgrBottom(presentation.prompts,false,width==400);const auto* pixels = blurEnabled ? blur.Composite(image,width,presentation.racing) : image;Present(pixels,presentation.prompts,width);if(captureState(lastFrameState.data(),lastFrameStateAddress))lastRecordedFrame=frame;if((frame==1||frame%120==0)&&logFile)fflush(logFile);});
+     printf("[PGR] v1.3 software renderer, race ghosting %s\n",blurEnabled?"on":"off");result=runtime.Run(G(binary.entry_point),0);
      if(result){uint32_t registers[17]{};for(unsigned n=0;n<17;++n)cpu->RegRead(n,&registers[n]);uint32_t state=0;cpu->MemRead(G(0x4a0c4154),&state,4);uint8_t snapshot[128]{};bool valid=state>=HEAP_BASE&&uint64_t(state)+sizeof(snapshot)<=uint64_t(HEAP_BASE)+HEAP_SIZE;if(valid)cpu->MemRead(state,snapshot,sizeof(snapshot));FILE* detail=fopen("sdmc:/3ds/pgr_mobile/test5_report.bin","wb");if(detail){fwrite(registers,1,sizeof(registers),detail);fwrite(&state,1,sizeof(state),detail);fwrite(snapshot,1,sizeof(snapshot),detail);fwrite(&lastRecordedFrame,1,sizeof(lastRecordedFrame),detail);fwrite(&lastFrameStateAddress,1,sizeof(lastFrameStateAddress),detail);fwrite(lastFrameState.data(),1,lastFrameState.size(),detail);fclose(detail);}if(logFile)fflush(logFile);}
 
     }else{FaultConsole();puts("Could not load game files. Check the game folder.");}

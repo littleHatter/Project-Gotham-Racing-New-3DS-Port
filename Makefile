@@ -29,7 +29,9 @@ $(TARGET).elf: $(OBJECTS)
 $(BUILD):
 	mkdir -p $@
 
-$(BUILD)/main_3ds.o: display_toggle_art.h
+$(BUILD)/main_3ds.o: display_toggle_art.h blur_menu_art.h
+blur_menu_art.h: artwork/blurselect.png artwork/No.png artwork/Yes.png generate_blur_menu.py
+	python3 generate_blur_menu.py
 display_toggle_art.h: artwork/Switch_to_Wide.png artwork/Switch_to_Standard.png generate_display_toggle.py
 	python3 generate_display_toggle.py
 

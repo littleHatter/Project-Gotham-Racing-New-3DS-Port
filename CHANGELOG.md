@@ -1,3 +1,8 @@
+# Project Gotham Racing v1.3
+
+- Adds a touchscreen startup choice for race ghosting.
+- Blends the previous clean frame at 50% during races, including the HUD.
+
 # Project Gotham Racing v1.2
 
 - Retains the hardware-verified race-loading guard for invalid sound resource references.

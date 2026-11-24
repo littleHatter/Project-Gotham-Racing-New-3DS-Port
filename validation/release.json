@@ -1,7 +1,7 @@
 {
-  "version": "1.2",
-  "baseline": "Paris Time Trial Test 3, hardware confirmed by user",
-  "application_sha256": "3f2e613fedcdf95c466455df7a3c980bbcc0796ceebb2e82bf4a3e5cdfe916bc",
+  "version": "1.3",
+  "baseline": "v1.2 software renderer with hardware-tested ghosting and a touchscreen startup choice",
+  "application_sha256": "2dcc12171657b1568fe329d6a0c5a87cf4dc48bd8ef6d924787c1d8dbda653d1",
   "smdh_sha256": "aab745ac1c45982585333d40abf1b60b971082b6ef824ebd00546ca47169fc0a",
   "title": "Project Gotham Racing",
   "description": "Project Gotham Racing",
